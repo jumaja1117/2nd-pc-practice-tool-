@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Tetris Perfect Clear Practice Calculator</title>
+
+<style>
+/* ================= Base Styles ================= */
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  background-color: #2F3437;
+  color: #AAB4BE;
+}
+
+.section-group { margin-bottom: 30px; }
+.input-group { margin-bottom: 20px; }
+
+h2, h3 { margin-top: 0; margin-bottom: 10px; color: #E6E6E6; }
+hr { border: 0; border-top: 1px solid #4A525A; margin: 20px 0; }
+
+button {
+  background-color: #3C4043;
+  color: #E6E6E6;
+  border: 1px solid #4A525A;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:hover { background-color: #4A525A; color: #fff; }
+
+input[type="number"], input[type="file"] {
+  background-color: #23272A; color: #F2F2F2;
+  border: 1px solid #3C4043; padding: 6px; border-radius: 6px; margin: 5px;
+}
+input[type="file"]::file-selector-button {
+  background-color: #3C4043; color: #E6E6E6;
+  border: 1px solid #4A525A; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+}
+
+#links {
+  max-height: 300px; overflow-y: auto; border: 1px solid #4A525A;
+  padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px;
+}
+
+.fallback-textarea {
+  width: 100%; height: 150px; background: #23272A; color: #fff;
+  border: 1px solid #FF5555; margin-top: 10px; padding: 10px;
+}
+
+/* ================= Generated Link Buttons ================= */
+.link-row {
+  display: flex; gap: 10px; margin-bottom: 8px; align-items: center;
+}
+.practice-btn {
+  flex: 1; background-color: #2C5282; color: #E2E8F0; border: 1px solid #2B6CB0;
+  text-align: left; padding: 10px; font-weight: bold; border-radius: 4px; transition: 0.2s;
+}
+.practice-btn:hover { background-color: #2B6CB0; color: #fff; }
+
+.practice-btn.visited {
+  background-color: #1A202C; border-color: #2D3748; color: #718096;
+}
+
+.star-btn {
+  background: none; border: 1px solid #4A525A; color: #AAB4BE; 
+  font-size: 1.2em; padding: 5px 12px;
+}
+.star-btn.active { color: #F6E05E; border-color: #F6E05E; background: rgba(246, 224, 94, 0.1); }
+
+/* ================= Save Warning Animation ================= */
+@keyframes pulseWarning {
+  0% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+.save-warning {
+  display: none;
+  color: #b91c1c;
+  font-weight: bold;
+  margin-left: 10px;
+  animation: pulseWarning 1.2s infinite ease-in-out; 
+}
+
+/* ================= Modal Styles ================= */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.7); z-index: 1000;
+  justify-content: center; align-items: center;
+}
+.calendar-container {
+  display: flex; background-color: #2F3437; border: 1px solid #4A525A;
+  border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  position: relative; max-width: 700px; width: 100%;
+}
+.close-btn {
+  position: absolute; top: 15px; right: 20px; font-size: 24px;
+  color: #AAB4BE; cursor: pointer; line-height: 1;
+}
+.close-btn:hover { color: #fff; }
+
+/* Calendar Elements */
+.calendar-main { flex: 1; min-width: 350px; }
+.cal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; font-size: 1.2em; font-weight: bold; color: #E6E6E6; position: relative;
+}
+.cal-header button { font-size: 1.2em; padding: 2px 10px; }
+.cal-header-title { cursor: pointer; padding: 5px 10px; border-radius: 4px; }
+.cal-header-title:hover { background-color: #3C4043; }
+.month-picker {
+  display: none; position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+  background: #23272A; border: 1px solid #4A525A; border-radius: 6px;
+  padding: 10px; grid-template-columns: repeat(3, 1fr); gap: 5px; z-index: 10;
+}
+.month-picker div {
+  padding: 8px 12px; text-align: center; cursor: pointer; border-radius: 4px; color: #E6E6E6;
+}
+.month-picker div:hover { background: #3C4043; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-day-name { text-align: center; font-size: 0.9em; margin-bottom: 10px; color: #7E8A96; }
+.cal-cell {
+  aspect-ratio: 1; display: flex; justify-content: center; align-items: center;
+  border-radius: 4px; background-color: #3C4043; cursor: pointer; color: #E6E6E6;
+  font-size: 0.9em; transition: 0.2s;
+}
+.cal-cell:hover { border: 1px solid #AAB4BE; }
+.cal-cell.empty { background-color: transparent; cursor: default; pointer-events: none; }
+.cal-cell.level-1 { background-color: #0e4429; color: #fff; }
+.cal-cell.level-2 { background-color: #006d32; color: #fff; }
+.cal-cell.level-3 { background-color: #26a641; color: #fff; }
+.cal-cell.level-4 { background-color: #39d353; color: #000; font-weight: bold; }
+.cal-cell.selected { border: 2px solid #00E5FF; }
+.cal-side {
+  width: 200px; margin-left: 20px; padding-left: 20px; border-left: 1px solid #4A525A;
+}
+.cal-side h4 { margin-top: 0; color: #E6E6E6; border-bottom: 1px solid #4A525A; padding-bottom: 10px; }
+.record-list { list-style: none; padding: 0; margin: 0; }
+.record-list li {
+  display: flex; justify-content: space-between; background: #23272A;
+  padding: 8px; border-radius: 4px; margin-bottom: 5px; color: #00E5FF; font-size: 0.9em;
+}
+.record-empty { font-size: 0.9em; color: #7E8A96; }
+
+/* ================= 2회차 모달 커스텀 UI ================= */
+#favListContainer { display: flex; flex-direction: column; width: 100%; max-height: 400px; overflow-y: auto; }
+
+.type-group-container {
+  background-color: #1A202C; 
+  border: 1px solid #2D3748;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.type-btn-row {
+  display: flex;
+  gap: 6px;
+}
+
+.type-btn {
+  background-color: #2C5282; color: #E2E8F0; border: 1px solid #2B6CB0;
+  padding: 8px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; text-align: center;
+  flex: 1; 
+  margin: 0;
+}
+.type-btn:hover { background-color: #2B6CB0; color: #fff; }
+
+.example-btn {
+  background-color: rgba(246, 224, 94, 0.15);
+  color: #F6E05E;
+  border: 1px solid rgba(246, 224, 94, 0.4);
+  padding: 6px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+  text-align: center;
+  font-size: 0.85em;
+  margin: 0;
+}
+.example-btn:hover {
+  background-color: rgba(246, 224, 94, 0.3);
+  color: #fff;
+}
+
+/* ================= 셋업 예시 팝업창 전용 스타일 ================= */
+.setup-content-container {
+  max-height: 60vh; 
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+/* 각 등급별 내용을 감싸는 묶음 배경 도형 */
+.setup-group-container {
+  background-color: #1A202C; 
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px; 
+}
+
+/* 색상별 가로 띠 */
+.setup-band {
+  padding: 8px 12px;
+  margin: 0; 
+  font-weight: bold;
+  border-radius: 4px;
+  text-align: center;
+}
+.band-beginner { background-color: #2C5282; border: 1px solid #2B6CB0; color: #E2E8F0; }
+.band-intermediate { background-color: #744210; border: 1px solid #B7791F; color: #F6E05E; }
+.band-advanced { background-color: #742A2A; border: 1px solid #9B2C2C; color: #FC8181; }
+.band-blitz { background-color: #9C4221; border: 1px solid #C05621; color: #FBD38D; }
+
+/* 이미지 및 캡션 */
+.setup-img {
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid #4A525A;
+  border-radius: 4px;
+  display: block;
+  background-color: #1A202C; 
+  margin: 0 auto;
+}
+.setup-img-caption {
+  text-align: center;
+  font-size: 0.9em;
+  color: #AAB4BE;
+  margin-top: -5px; 
+}
+
+/* 펼치기/접기 상자 */
+.setup-details {
+  background-color: #23272A;
+  border: 1px solid #4A525A;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 0;
+}
+.setup-details summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #63B3ED;
+  outline: none;
+  list-style: none; 
+}
+.setup-details summary::before {
+  content: "▶ ";
+  font-size: 0.8em;
+}
+.setup-details[open] summary::before {
+  content: "▼ ";
+}
+.setup-details p {
+  margin-top: 10px;
+  margin-bottom: 0;
+  line-height: 1.6;
+  font-size: 0.95em;
+  color: #E6E6E6;
+}
+
+/* 하이퍼링크 버튼 */
+.setup-link-btn {
+  display: inline-block;
+  background-color: #3C4043;
+  color: #00E5FF;
+  border: 1px solid #4A525A;
+  padding: 10px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  transition: 0.2s;
+  margin: 0;
+}
+.setup-link-btn:hover {
+  background-color: #4A525A;
+  color: #fff;
+}
+</style>
+</head>
+
+<body>
+
+<div class="section-group">
+  <h2>Tetris Perfect Clear Practice Calculator</h2>
+  <button onclick="createStatsFile()" style="font-size: 1.1em; padding: 10px 15px; font-weight: bold; background-color: #2C5282; border-color: #2B6CB0; color: white;">
+    학습기록 파일 새로만들기
+  </button>
+</div>
+
+<hr>
+
+<div class="input-group">
+  <h3>학습 기록 파일 업로드</h3>
+  <input type="file" id="statsFile">
+</div>
+
+<div class="input-group">
+  <h3 style="display: flex; align-items: center; gap: 10px;">
+    타입
+    <button id="openFavModalBtn" style="font-size: 0.8em; background-color: transparent; border-color: #F6E05E; color: #F6E05E; padding: 4px 8px;">★ 즐겨찾기한 넥스트</button>
+    <button id="openCountsModalBtn" style="font-size: 0.8em; background-color: transparent; border-color: #63B3ED; color: #63B3ED; padding: 4px 8px;">📊 넥스트 출현 빈도수</button>
+  </h3>
+  
+  <div style="display: flex; align-items: center; gap: 15px;">
+    <button id="openTypeModalBtn" style="font-size: 1em; padding: 8px 12px;">타입 선택하기</button>
+    <span id="selectedTypeDisplay" style="color: #00E5FF; font-weight: bold; font-size: 1.1em;">선택됨: 없음</span>
+  </div>
+</div>
+
+<div class="input-group">
+  <h3>생성 개수</h3>
+  <input type="number" id="countInput" value="100" min="1" max="500">
+</div>
+
+<div class="section-group">
+  <button id="generateBtn">생성</button>
+  <button id="generateFavBtn" style="background-color: #744210; border-color: #B7791F;">★ 즐겨찾기 생성</button>
+  <button id="saveStatsBtn">학습기록 저장</button>
+  <span id="saveWarning" class="save-warning">저장하는거 잊지마세요!</span>
+</div>
+
+<div class="section-group">
+  <button id="openCalendarBtn" style="background-color: #26a641; border-color: #006d32;">🗓 학습 캘린더 보기</button>
+</div>
+
+<div class="section-group">
+  <h3>연습 링크</h3>
+  <div id="links"></div>
+</div>
+
+<div class="modal-overlay" id="calendarOverlay">
+  <div class="calendar-container">
+    <span class="close-btn" id="closeCalendarBtn">&times;</span>
+    <div class="calendar-main">
+      <div class="cal-header">
+        <button id="prevMonthBtn">&lt;</button>
+        <div class="cal-header-title" id="calHeaderTitle"></div>
+        <button id="nextMonthBtn">&gt;</button>
+        <div class="month-picker" id="monthPicker"></div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-day-name">일</div><div class="cal-day-name">월</div>
+        <div class="cal-day-name">화</div><div class="cal-day-name">수</div>
+        <div class="cal-day-name">목</div><div class="cal-day-name">금</div>
+        <div class="cal-day-name">토</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="cal-side">
+      <h4 id="sideDateDisplay">날짜를 선택하세요</h4>
+      <ul class="record-list" id="sideRecordList">
+        <li class="record-empty">기록 없음</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="favOverlay">
+  <div class="calendar-container" style="flex-direction: column; max-width: 500px;">
+    <span class="close-btn" id="closeFavBtn">&times;</span>
+    <h3 style="margin-top: 0; color: #F6E05E;">★ 즐겨찾기 목록</h3>
+    <div id="favListContainer"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="countsOverlay">
+  <div class="calendar-container" style="flex-direction: column; max-width: 500px;">
+    <span class="close-btn" id="closeCountsBtn">&times;</span>
+    <h3 style="margin-top: 0; color: #63B3ED;">📊 넥스트 출현 빈도수 (적은 순)</h3>
+    <div id="countsListContainer" style="display: flex; flex-direction: column; width: 100%; max-height: 400px; overflow-y: auto; gap: 5px;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="typeOverlay">
+  <div class="calendar-container" style="flex-direction: column; max-width: 700px; position: relative;">
+    <span class="close-btn" id="closeTypeBtn">&times;</span>
+    <input type="text" id="typeSearchInput" placeholder="검색 (예: JLST)" style="position: absolute; top: 12px; right: 50px; width: 120px; background-color: #23272A; color: #F2F2F2; border: 1px solid #4A525A; padding: 4px 8px; border-radius: 4px; font-size: 0.9em; outline: none;">
+    
+    <h3 style="margin-top: 0; color: #E6E6E6;">2회차 타입 선택</h3>
+    <div id="typeListContainer" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 500px; overflow-y: auto; padding-right: 5px;"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exampleOverlay">
+  <div class="calendar-container" style="flex-direction: column; max-width: 550px; position: relative;">
+    <span class="close-btn" id="closeExampleBtn">&times;</span>
+    <h3 id="exampleModalTitle" style="margin-top: 0; color: #E6E6E6;">예시보기</h3>
+    
+    <div class="setup-content-container" id="exampleContentContainer">
+    </div>
+  </div>
+</div>
+<script>
+const MAX_PERM = 5040;
+const BASE_URL = "https://himitsuconfidential.github.io/downstack-practice/usermode.html";
+
+const TYPES_ORDER = [
+  "TOIS", "TOIZ", "TOLJ", "TOSZ", "TILJ", "TISZ", "TLJS", "TLJZ", "TOIL", "TOIJ",
+  "TOLS", "TOJZ", "TOLZ", "TOJS", "TILS", "TIJZ", "TILZ", "TIJS", "TLSZ", "TJSZ",
+  "OILJ", "OISZ", "OLJS", "OLJZ", "ILJS", "ILJZ", "LJSZ", "OILS", "OIJZ", "OILZ",
+  "OIJS", "OLSZ", "OJSZ", "ILSZ", "IJSZ"
+];
+
+let statsData = null;
+let currentType = null;
+let isStatsDirty = false;
+
+// ================= [추가됨] 예시 데이터베이스 =================
+const exampleContentDB = {
+  "TOIS/TOIZ": `
+    <div class="setup-group-container">
+      <div class="setup-band band-beginner">초급 셋업</div>
+      <img src="TOIS 초급.jpg" alt="TOIS 초급 셋업 이미지" class="setup-img">
+      
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          TOIZ 셋업은 위 사진의 선대칭 모양이며 TOSZ의 초급, TLJS/TLJZ의 초급과 같은 모양입니다.<br><br>
+          <strong>장점:</strong> 중급 셋업에 비하면 해법 수가 적고 L, J세이브 해법이 없습니다.<br><br>
+          <strong>단점:</strong> 퍼클확률이 100%가 아니며 다음 가방이 LOZ, OLZ, 혹은 [OIL]! 중 하나로 시작하면 퍼클 실패 가능성이 생깁니다. 다른 초급 셋업들에 비하면 해법 개수가 많고 어려우며 중급 셋업과는 다르게 t스핀 해법이 없기도 하여 퍼클 중 추가점수를 기대하기 어렵습니다. 셋업과 해법 모두 구축 도중 소프트 드랍을 요구하는 경우가 많아 kpp가 망가지고 속도가 느려지기 쉽습니다.
+        </p>
+      </details>
+      <a href="https://www.perfectclearinfokorea.com/%EC%97%B0%EC%86%8D%ED%8D%BC%ED%81%B4-%EC%A0%95%EB%B3%B4/2%ED%9A%8C%EC%B0%A8/%EC%B4%88%EA%B8%89-%EC%85%8B%EC%97%85#h.9joduzga7050" target="_blank" class="setup-link-btn">T 셋업 5 공부하기</a>
+    </div>
+
+    <div class="setup-group-container">
+      <div class="setup-band band-intermediate">중급 셋업(jumaja's pick)</div>
+      <img src="TOIS 중급 정방향.jpg" alt="TOIS 중급 정방향" class="setup-img">
+      <div class="setup-img-caption">정방향 셋업</div>
+      
+      <img src="TOIS 중급 역방향.jpg" alt="TOIS 중급 역방향" class="setup-img">
+      <div class="setup-img-caption">역방향 셋업</div>
+
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          넥스트 의존성 구축 요소가 t,s 조합 뿐이고 홀드로 커버가 가능하므로 TOIS를 나열하는 모든 경우의 수 4!에서 정방향, 역방향이 모두 구축 가능합니다.<br><br>
+          <strong>장점:</strong> 최소 해법에 T스핀 해법이 존재하며 추가 T스핀 해법 또한 존재합니다. 셋업 구축 중 T를 S/Z보다 먼저 둔다면 반드시 소프트드랍을 요구하지 않습니다. (즉, 구축 속도가 빨라집니다.)<br><br>
+          <strong>단점:</strong> 강제 L, J 세이브가 확률이 낮다 해도 존재합니다.
+        </p>
+      </details>
+      <a href="https://www.perfectclearinfokorea.com/%EC%97%B0%EC%86%8D%ED%8D%BC%ED%81%B4-%EC%A0%95%EB%B3%B4/2%ED%9A%8C%EC%B0%A8/%EC%A4%91%EA%B8%89-%EC%85%8B%EC%97%85#h.c28u67ntllbh" target="_blank" class="setup-link-btn">셋업 8: TOIS/TOIZ 공부하기</a>
+    </div>
+
+    <div class="setup-group-container">
+      <div class="setup-band band-advanced">고급 셋업</div>
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          pc info korea에 기재된 고급 셋업은 블리츠를 위한 고급 셋업이 아닌 순수퍼클을 위한 고급 셋업으로 TOILJSZ순서로 세이브 확률을 높일 것을 추구하기에 추천드리지 않습니다.<br><br>
+          본인이 이 사이트를 순수퍼클을 연습하기 위해 접하셨다면 아래 '공부하기'버튼을 눌러 공부해보시는걸 추천드립니다.
+        </p>
+      </details>
+      <a href="https://www.perfectclearinfokorea.com/%EC%97%B0%EC%86%8D%ED%8D%BC%ED%81%B4-%EC%A0%95%EB%B3%B4/2%ED%9A%8C%EC%B0%A8/%EA%B3%A0%EA%B8%89-%EC%85%8B%EC%97%85/t-even-lj/toistoiz" target="_blank" class="setup-link-btn">공부하기</a>
+    </div>
+
+    <div class="setup-group-container">
+      <div class="setup-band band-blitz">블리츠용 셋업</div>
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          중급 셋업에서 정방향과 역방향 전부를 배운 이유가 QB를 사용하기 위함이였습니다.<br><br>
+          여러분은 셋업 구축 상황에 놓였을 때 홀드 + 현재 미노 + 넥스트 미노 5개로 총 7개의 미노를 볼 수 있는데 이때 셋업 구축용 미노를 y로 해법용 미노를 x로 둔다면 여러분이 보고있는 블록 순서는 y₁ y₂ y₃ y₄ x₁ x₂ x₃가 됩니다.<br><br>
+          이때 x₁ x₂ x₃를 보고 본인이 원하는 해법을 쓰기 위해 셋업을 다르게 구축하는 기술을 QB라고 합니다.<br><br>
+          글로는 이해가 힘드실 수 있어 아래 영상을 보시는 걸 추천드립니다.
+        </p>
+      </details>
+      <a href="https://www.youtube.com" target="_blank" class="setup-link-btn" style="color: #FBD38D;">QB 이해하기</a>
+    </div>
+  `,
+  "TOLJ": `
+    <div class="setup-group-container">
+      <div class="setup-band band-beginner">초급 셋업(jumaja's pick)</div>
+      <img src="TOLJ 초급.jpg" alt="TOLJ 초급 셋업 이미지" class="setup-img">
+      
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          위 사진에서 O미노를 맨 왼쪽에 두는 셋업이나 맨 왼쪽을 비운 선대칭형 셋업은 피네스 효율이 좋지 못합니다.<br><br>
+          <strong>장점:</strong> 최소해법이 2개밖에 안되며 S세이브와 Z세이브 해법이 있습니다.<br>
+          셋업을 구축할 때 소프트드랍이 일체 이용되지 않으며 해법을 구축할 때에도 소프트드랍이 거의 이용되지 않습니다.<br><br>
+          <strong>단점:</strong> DPC로 가장 좋은 O미노 세이브 해법이 존재하지 않습니다.
+        </p>
+      </details>
+      <a href="https://four.lol/perfect-clears/2nd#jlot-100" target="_blank" class="setup-link-btn">공부하기</a>
+    </div>
+
+    <div class="setup-group-container">
+      <div class="setup-band band-intermediate">중급 셋업</div>
+      <img src="TOLJ 중급.jpg" alt="TOLJ 중급 셋업 이미지" class="setup-img">
+      
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          넥스트 의존성 구축 요소가 T, J 조합 뿐이고 홀드로 커버가 가능하므로 TOLJ를 나열하는 모든 경우의 수 4!에서 정방향, 역방향이 모두 구축 가능합니다.<br><br>
+          <strong>장점:</strong> 최소해법 중 I, L, J 세이브 해법이 매우 적습니다.<br>
+          O세이브와 T세이브 해법이 매우 많으며 입맛에 따라 추가 O세이브 해법을 만들 수 있습니다.<br>
+          T스핀 해법이 존재합니다.<br><br>
+          <strong>단점:</strong> 강제 L, J 세이브가 확률이 낮다 해도 존재합니다.<br>
+          진입하기도 어려운 2회차이며 해법들 또한 난해하여 매우 어렵습니다.
+        </p>
+      </details>
+      <a href="https://www.perfectclearinfokorea.com/%EC%97%B0%EC%86%8D%ED%8D%BC%ED%81%B4-%EC%A0%95%EB%B3%B4/2%ED%9A%8C%EC%B0%A8/%EC%A4%91%EA%B8%89-%EC%85%8B%EC%97%85#h.yjb0w4a0ec3m" target="_blank" class="setup-link-btn">셋업 6: TOLJ 공부하기</a>
+    </div>
+
+    <div class="setup-group-container">
+      <div class="setup-band band-advanced">고급 셋업</div>
+      
+      <details class="setup-details">
+        <summary>간단 설명 펼치기 • 접기</summary>
+        <p>
+          pc info korea에 기재된 고급 셋업은 블리츠를 위한 고급 셋업이 아닌 순수퍼클을 위한 고급 셋업으로 TOILJSZ순서로 세이브 확률을 높일 것을 추구하기에 추천드리지 않습니다.<br><br>
+          본인이 이 사이트를 순수퍼클을 연습하기 위해 접하셨다면 아래 '공부하기'버튼을 눌러 공부해보시는걸 추천드립니다.
+        </p>
+      </details>
+      <a href="https://www.perfectclearinfokorea.com/%EC%97%B0%EC%86%8D%ED%8D%BC%ED%81%B4-%EC%A0%95%EB%B3%B4/2%ED%9A%8C%EC%B0%A8/%EA%B3%A0%EA%B8%89-%EC%85%8B%EC%97%85/t-even-lj/tolj" target="_blank" class="setup-link-btn">공부하기</a>
+    </div>
+  `
+};
+// ==========================================================
+
+// 문구 노출 관리 함수
+function updateWarningState() {
+  const warningSpan = document.getElementById("saveWarning");
+  if (isStatsDirty) {
+    warningSpan.style.display = "inline-block";
+  } else {
+    warningSpan.style.display = "none";
+  }
+}
+
+const toDate = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+
+const toFileNameDate = () => {
+  return toDate().replace(/-/g, '_');
+};
+
+function createStatsFile() {
+  if (!confirm("새로운 학습기록 파일을 만드시겠습니까?")) return;
+  
+  const newData = { type_stats: {} };
+  TYPES_ORDER.forEach(typeStr => {
+    newData.type_stats[typeStr] = {
+      counts: new Array(MAX_PERM).fill(0),
+      favorites: [],
+      history: [],
+      total: 0
+    };
+  });
+  
+  downloadJSON(newData, `학습기록_${toFileNameDate()}.json`);
+}
+
+function downloadJSON(data, fileName) {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const a = document.createElement("a");
+      a.href = reader.result;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      fallback(json);
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function fallback(json) {
+  const ta = document.createElement("textarea");
+  ta.className = "fallback-textarea";
+  ta.value = json;
+  document.body.appendChild(ta);
+  ta.select();
+  alert("다운로드 실패 (팝업 차단 등).\n아래 생성된 텍스트박스 내용을 직접 저장하세요.");
+}
+
+const statsInput = document.getElementById("statsFile");
+statsInput.onclick = (e) => { e.target.value = null; };
+statsInput.onchange = (e) => {
+  if (!e.target.files.length) return;
+  const r = new FileReader();
+  r.onload = () => {
+    statsData = JSON.parse(r.result);
+    currentType = null;
+    document.getElementById("selectedTypeDisplay").textContent = "선택됨: 없음";
+    document.getElementById("links").innerHTML = "";
+    
+    if (!statsData.type_stats) statsData.type_stats = {};
+    TYPES_ORDER.forEach(typeStr => {
+      if (!statsData.type_stats[typeStr]) {
+        statsData.type_stats[typeStr] = {
+          counts: new Array(MAX_PERM).fill(0),
+          favorites: [],
+          history: [],
+          total: 0
+        };
+      } else {
+        if (!statsData.type_stats[typeStr].counts) statsData.type_stats[typeStr].counts = new Array(MAX_PERM).fill(0);
+        if (!statsData.type_stats[typeStr].favorites) statsData.type_stats[typeStr].favorites = [];
+      }
+    });
+
+    isStatsDirty = false;
+    updateWarningState();
+    alert("학습 기록 파일 로드 완료! 이제 타입을 선택해주세요.");
+  };
+  r.readAsText(e.target.files[0]);
+};
+
+// ================= [수정됨] 2회차 선대칭 그룹핑 함수 및 모달 로직 =================
+function getMinoOrder(c) { return "TOILJSZ".indexOf(c); }
+
+function getMirrorType(typeStr) {
+  const mirrorMap = {'T':'T', 'O':'O', 'I':'I', 'L':'J', 'J':'L', 'S':'Z', 'Z':'S'};
+  return typeStr.split('').map(c => mirrorMap[c]).sort((a,b) => getMinoOrder(a) - getMinoOrder(b)).join('');
+}
+
+// TYPES_ORDER를 기반으로 선대칭 그룹 배열 생성
+let typeGroups = [];
+let skipNext = false;
+for (let i = 0; i < TYPES_ORDER.length; i++) {
+  if (skipNext) { skipNext = false; continue; }
+  
+  let current = TYPES_ORDER[i];
+  let mirror = getMirrorType(current);
+  
+  // 다음 순서가 정확히 본인의 선대칭이면서, 자기 자신이 선대칭이 아닌 경우 묶음 처리
+  if (i + 1 < TYPES_ORDER.length && TYPES_ORDER[i+1] === mirror && current !== mirror) {
+    typeGroups.push([current, mirror]);
+    skipNext = true;
+  } else {
+    typeGroups.push([current]); // 대칭이 없거나 본인 스스로가 대칭인 경우 1개
+  }
+}
+
+const typeOverlay = document.getElementById("typeOverlay");
+const typeListContainer = document.getElementById("typeListContainer");
+const exampleOverlay = document.getElementById("exampleOverlay");
+const exampleContentContainer = document.getElementById("exampleContentContainer");
+
+document.getElementById("openTypeModalBtn").onclick = () => {
+  if (!statsData) return alert("먼저 학습 기록 파일을 업로드해주세요.");
+  
+  const searchInput = document.getElementById("typeSearchInput");
+  if (searchInput) searchInput.value = "";
+  
+  typeListContainer.innerHTML = "";
+  
+  // 그룹 단위로 컨테이너(배경 도형) 생성
+  typeGroups.forEach(groupArr => {
+    const groupContainer = document.createElement("div");
+    groupContainer.className = "type-group-container";
+    
+    // 타입 버튼들을 담을 가로줄 생성
+    const btnRow = document.createElement("div");
+    btnRow.className = "type-btn-row";
+    
+    groupArr.forEach(typeStr => {
+      const btn = document.createElement("button");
+      btn.className = "type-btn";
+      btn.textContent = typeStr;
+      btn.onclick = () => {
+        currentType = typeStr;
+        document.getElementById("selectedTypeDisplay").textContent = `선택됨: ${typeStr}`;
+        document.getElementById("links").innerHTML = ""; 
+        typeOverlay.style.display = "none";
+      };
+      btnRow.appendChild(btn);
+    });
+    
+    // 예시 보기 버튼 생성
+    const exampleBtn = document.createElement("button");
+    exampleBtn.className = "example-btn";
+    exampleBtn.textContent = "예시 보기";
+    const groupTitle = groupArr.join("/"); // 예: "TOIS/TOIZ" 또는 "TOLJ"
+    
+    // ===== [수정됨] 버튼 클릭 시 동적으로 내용을 채워넣는 로직 =====
+    exampleBtn.onclick = () => {
+      document.getElementById("exampleModalTitle").textContent = `${groupTitle} 예시`;
+      
+      // DB에 해당 그룹의 데이터가 있으면 넣고, 없으면 안내 문구 출력
+      if (exampleContentDB[groupTitle]) {
+        exampleContentContainer.innerHTML = exampleContentDB[groupTitle];
+      } else {
+        exampleContentContainer.innerHTML = `
+          <div style="color: #AAB4BE; margin-top: 30px; text-align: center;">
+            아직 추가된 예시 컨텐츠가 없습니다.<br>(${groupTitle})
+          </div>
+        `;
+      }
+      
+      typeOverlay.style.display = "none";    // 타입 선택 팝업 숨김
+      exampleOverlay.style.display = "flex"; // 예시 팝업 표시
+    };
+    // =======================================================
+    
+    groupContainer.appendChild(btnRow);
+    groupContainer.appendChild(exampleBtn);
+    typeListContainer.appendChild(groupContainer);
+  });
+  
+  typeOverlay.style.display = "flex";
+};
+
+// 예시 팝업의 x버튼 및 오버레이 클릭 시: 홈이 아니라 타입선택 모달로 회귀
+document.getElementById("closeExampleBtn").onclick = () => {
+  exampleOverlay.style.display = "none";
+  typeOverlay.style.display = "flex";
+};
+exampleOverlay.onclick = (e) => {
+  if (e.target === exampleOverlay) {
+    exampleOverlay.style.display = "none";
+    typeOverlay.style.display = "flex";
+  }
+};
+
+document.getElementById("closeTypeBtn").onclick = () => { typeOverlay.style.display = "none"; };
+typeOverlay.onclick = (e) => { if (e.target === typeOverlay) typeOverlay.style.display = "none"; };
+
+// ================= [수정됨] 2회차 타입 소거법 검색 알고리즘 (그룹 연동) =================
+const typeSearchInput = document.getElementById("typeSearchInput");
+
+typeSearchInput.addEventListener("input", (e) => {
+  const searchChars = e.target.value.toUpperCase().split('');
+  const groupContainers = document.getElementById("typeListContainer").querySelectorAll(".type-group-container");
+
+  groupContainers.forEach(group => {
+    let hasVisibleBtn = false;
+    const typeBtns = group.querySelectorAll(".type-btn");
+    
+    typeBtns.forEach(btn => {
+      const typeName = btn.textContent;
+      // 입력된 모든 알파벳이 버튼 이름에 포함되어 있는지 검사
+      const isMatch = searchChars.every(char => typeName.includes(char));
+      
+      if (isMatch) {
+        btn.style.display = ""; 
+        hasVisibleBtn = true;
+      } else {
+        btn.style.display = "none";
+      }
+    });
+    
+    // 묶음 안의 버튼 중 하나라도 조건에 맞으면 묶음 자체를 보여주고, 아니면 묶음(배경)째로 숨김
+    group.style.display = hasVisibleBtn ? "flex" : "none";
+  });
+});
+// ====================================================================================
+
+function perm(index) {
+  const items = ["T","O","I","S","J","L","Z"];
+  const fact = [1,1,2,6,24,120,720];
+  let res = [];
+  for (let i = 6; i >= 0; i--) {
+    const f = fact[i];
+    const idx = Math.floor(index / f);
+    res.push(items.splice(idx,1)[0]);
+    index %= f;
+  }
+  return res;
+}
+
+function renderLinks(resultsArray, typeStr) {
+  const box = document.getElementById("links");
+  box.innerHTML = "";
+
+  const typeData = statsData.type_stats[typeStr];
+
+  resultsArray.forEach((idx, i) => {
+    const permStr = perm(idx).join(",");
+    const url = `${BASE_URL}/=[${typeStr}]p4,${permStr}`;
+
+    const row = document.createElement("div");
+    row.className = "link-row";
+
+    const pBtn = document.createElement("button");
+    pBtn.className = "practice-btn";
+    pBtn.textContent = `${typeStr} ${i + 1}번`;
+    
+    pBtn.onclick = () => {
+      window.open(url, "_blank");
+
+      if (!pBtn.classList.contains("visited")) {
+        pBtn.classList.add("visited");
+        
+        typeData.total += 1;
+        
+        const todayStr = toDate();
+        let historyEntry = typeData.history.find(h => h.date === todayStr);
+        if (!historyEntry) {
+          historyEntry = { date: todayStr, count: 0 };
+          typeData.history.push(historyEntry);
+        }
+        historyEntry.count += 1;
+
+        typeData.counts[idx]++;
+        
+        isStatsDirty = true;
+        updateWarningState();
+      }
+    };
+
+    const sBtn = document.createElement("button");
+    sBtn.className = "star-btn";
+    
+    const isFav = typeData.favorites.includes(idx);
+    if (isFav) sBtn.classList.add("active");
+    sBtn.textContent = isFav ? "★" : "☆";
+
+    sBtn.onclick = () => {
+      sBtn.classList.toggle("active");
+      const active = sBtn.classList.contains("active");
+      sBtn.textContent = active ? "★" : "☆";
+
+      if (active) {
+        if (!typeData.favorites.includes(idx)) typeData.favorites.push(idx);
+      } else {
+        typeData.favorites = typeData.favorites.filter(v => v !== idx);
+      }
+      isStatsDirty = true;
+      updateWarningState();
+    };
+
+    row.appendChild(pBtn);
+    row.appendChild(sBtn);
+    box.appendChild(row);
+  });
+}
+
+document.getElementById("generateBtn").onclick = () => {
+  if (!statsData || !currentType) return alert("학습 파일을 로드하고 타입을 먼저 선택해주세요.");
+
+  const N = parseInt(document.getElementById("countInput").value);
+  const results = [];
+  const countsArr = statsData.type_stats[currentType].counts;
+
+  for (let i = 0; i < N; i++) {
+    const a = Math.floor(Math.random() * MAX_PERM);
+    const b = Math.floor(Math.random() * MAX_PERM);
+    const chosen = countsArr[a] <= countsArr[b] ? a : b;
+    results.push(chosen);
+  }
+  
+  renderLinks(results, currentType);
+};
+
+document.getElementById("generateFavBtn").onclick = () => {
+  if (!statsData || !currentType) return alert("학습 파일을 로드하고 타입을 먼저 선택해주세요.");
+  
+  const favArr = statsData.type_stats[currentType].favorites;
+  if (!favArr || favArr.length === 0) return alert("해당 타입에 저장된 즐겨찾기가 없습니다.");
+
+  const N = parseInt(document.getElementById("countInput").value);
+  const results = [];
+  const favLen = favArr.length;
+
+  for (let i = 0; i < N; i++) {
+    const randIdx = Math.floor(Math.random() * favLen);
+    const chosen = favArr[randIdx];
+    results.push(chosen);
+  }
+
+  renderLinks(results, currentType);
+};
+
+document.getElementById("saveStatsBtn").onclick = () => {
+  if (!statsData) return alert("저장할 학습기록 파일이 없습니다.");
+  downloadJSON(statsData, `학습기록_${toFileNameDate()}.json`);
+  isStatsDirty = false;
+  updateWarningState();
+};
+
+window.addEventListener("beforeunload", (e) => {
+  if (isStatsDirty) { 
+    e.preventDefault(); 
+    e.returnValue = "저장되지 않은 데이터가 있습니다."; 
+    return e.returnValue; 
+  }
+});
+
+const favOverlay = document.getElementById("favOverlay");
+const favListContainer = document.getElementById("favListContainer");
+
+document.getElementById("openFavModalBtn").onclick = () => {
+  if (!statsData || !currentType) return alert("타입을 먼저 선택해주세요.");
+  
+  const favArr = statsData.type_stats[currentType].favorites;
+  favListContainer.innerHTML = "";
+  
+  if (!favArr || favArr.length === 0) {
+    favListContainer.innerHTML = "<p style='color:#7E8A96;'>즐겨찾기한 넥스트가 없습니다.</p>";
+  } else {
+    favArr.forEach((idx) => {
+      const permStr = perm(idx).join(",");
+      const url = `${BASE_URL}/=[${currentType}]p4,${permStr}`;
+
+      const row = document.createElement("div");
+      row.className = "link-row";
+
+      const pBtn = document.createElement("button");
+      pBtn.className = "practice-btn";
+      pBtn.style.backgroundColor = "#23272A";
+      pBtn.style.borderColor = "#4A525A";
+      pBtn.textContent = permStr;
+      
+      pBtn.onclick = () => { window.open(url, "_blank"); };
+
+      const sBtn = document.createElement("button");
+      sBtn.className = "star-btn active";
+      sBtn.textContent = "★";
+      
+      sBtn.onclick = () => {
+        statsData.type_stats[currentType].favorites = statsData.type_stats[currentType].favorites.filter(v => v !== idx);
+        row.remove();
+        isStatsDirty = true;
+        updateWarningState();
+        if (statsData.type_stats[currentType].favorites.length === 0) {
+          favListContainer.innerHTML = "<p style='color:#7E8A96;'>즐겨찾기한 넥스트가 없습니다.</p>";
+        }
+      };
+
+      row.appendChild(pBtn);
+      row.appendChild(sBtn);
+      favListContainer.appendChild(row);
+    });
+  }
+  favOverlay.style.display = "flex";
+};
+
+document.getElementById("closeFavBtn").onclick = () => { favOverlay.style.display = "none"; };
+favOverlay.onclick = (e) => { if (e.target === favOverlay) favOverlay.style.display = "none"; };
+
+const overlay = document.getElementById("calendarOverlay");
+const grid = document.getElementById("calGrid");
+const headerTitle = document.getElementById("calHeaderTitle");
+const monthPicker = document.getElementById("monthPicker");
+const sideDateDisplay = document.getElementById("sideDateDisplay");
+const sideRecordList = document.getElementById("sideRecordList");
+
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); 
+
+function getDailyData() {
+  const daily = {};
+  if (!statsData || !statsData.type_stats) return daily;
+  
+  for (const type in statsData.type_stats) {
+    const history = statsData.type_stats[type].history || [];
+    history.forEach(entry => {
+      if (!daily[entry.date]) daily[entry.date] = {};
+      if (!daily[entry.date][type]) daily[entry.date][type] = 0;
+      daily[entry.date][type] += entry.count;
+    });
+  }
+  return daily;
+}
+
+function renderCalendar() {
+  grid.innerHTML = "";
+  headerTitle.innerHTML = `${calYear}년 ${calMonth + 1}월 ▾`;
+  
+  const dailyData = getDailyData();
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const lastDate = new Date(calYear, calMonth + 1, 0).getDate();
+
+  for (let i = 0; i < firstDay; i++) {
+    const emptyCell = document.createElement("div");
+    emptyCell.className = "cal-cell empty";
+    grid.appendChild(emptyCell);
+  }
+
+  for (let i = 1; i <= lastDate; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    cell.textContent = i;
+    
+    const mm = String(calMonth + 1).padStart(2, '0');
+    const dd = String(i).padStart(2, '0');
+    const dateStr = `${calYear}-${mm}-${dd}`;
+
+    if (dailyData[dateStr]) {
+      let totalCount = 0;
+      for (const type in dailyData[dateStr]) totalCount += dailyData[dateStr][type];
+      
+      if (totalCount >= 300) cell.classList.add("level-4");
+      else if (totalCount >= 150) cell.classList.add("level-3");
+      else if (totalCount >= 50) cell.classList.add("level-2");
+      else cell.classList.add("level-1");
+    }
+
+    cell.onclick = () => {
+      document.querySelectorAll(".cal-cell").forEach(c => c.classList.remove("selected"));
+      cell.classList.add("selected");
+      showSidePanel(dateStr, dailyData[dateStr]);
+    };
+
+    grid.appendChild(cell);
+  }
+}
+
+function showSidePanel(dateStr, dayData) {
+  sideDateDisplay.textContent = dateStr;
+  sideRecordList.innerHTML = "";
+  
+  if (!dayData || Object.keys(dayData).length === 0) {
+    sideRecordList.innerHTML = `<li class="record-empty">학습 기록이 없습니다.</li>`;
+    return;
+  }
+  
+  for (const [type, count] of Object.entries(dayData)) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${type}</span> <span>${count}회</span>`;
+    sideRecordList.appendChild(li);
+  }
+}
+
+document.getElementById("openCalendarBtn").onclick = () => {
+  if (!statsData) return alert("먼저 학습 기록(json)을 로드하거나 생성해야 달력을 볼 수 있습니다.");
+  overlay.style.display = "flex";
+  
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  renderCalendar();
+  showSidePanel("날짜를 선택하세요", null);
+};
+
+document.getElementById("closeCalendarBtn").onclick = () => {
+  overlay.style.display = "none";
+  monthPicker.style.display = "none";
+};
+overlay.onclick = (e) => {
+  if (e.target === overlay) {
+    overlay.style.display = "none";
+    monthPicker.style.display = "none";
+  }
+};
+
+document.getElementById("prevMonthBtn").onclick = () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+};
+document.getElementById("nextMonthBtn").onclick = () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+};
+
+headerTitle.onclick = () => {
+  if (monthPicker.style.display === "grid") {
+    monthPicker.style.display = "none";
+  } else {
+    monthPicker.innerHTML = "";
+    for (let m = 0; m < 12; m++) {
+      const btn = document.createElement("div");
+      btn.textContent = `${m + 1}월`;
+      if (m === calMonth) btn.style.background = "#4A525A"; 
+      btn.onclick = () => {
+        calMonth = m;
+        renderCalendar();
+        monthPicker.style.display = "none";
+      };
+      monthPicker.appendChild(btn);
+    }
+    monthPicker.style.display = "grid";
+  }
+};
+
+const countsOverlay = document.getElementById("countsOverlay");
+const countsListContainer = document.getElementById("countsListContainer");
+
+document.getElementById("openCountsModalBtn").onclick = () => {
+  if (!statsData || !currentType) return alert("타입을 먼저 선택해주세요.");
+  
+  countsListContainer.innerHTML = "";
+  
+  const countsArray = statsData.type_stats[currentType].counts.map((count, index) => ({ index, count }));
+  countsArray.sort((a, b) => a.count - b.count);
+
+  countsArray.forEach(item => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.justifyContent = "space-between";
+    row.style.padding = "8px";
+    row.style.backgroundColor = "#23272A";
+    row.style.borderRadius = "4px";
+    row.style.color = "#E6E6E6";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = perm(item.index).join(",");
+
+    const countSpan = document.createElement("span");
+    countSpan.textContent = `${item.count}회`;
+    countSpan.style.color = "#63B3ED";
+    countSpan.style.fontWeight = "bold";
+
+    row.appendChild(nameSpan);
+    row.appendChild(countSpan);
+    countsListContainer.appendChild(row);
+  });
+  
+  countsOverlay.style.display = "flex";
+};
+
+document.getElementById("closeCountsBtn").onclick = () => { countsOverlay.style.display = "none"; };
+countsOverlay.onclick = (e) => { if (e.target === countsOverlay) countsOverlay.style.display = "none"; };
+
+</script>
+
+</body>
+</html>
